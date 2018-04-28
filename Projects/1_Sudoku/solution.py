@@ -7,7 +7,6 @@ column_units = [cross(rows, c) for c in cols]
 square_units = [cross(rs, cs) for rs in ('ABC','DEF','GHI') for cs in ('123','456','789')]
 unitlist = row_units + column_units + square_units
 
-# TODO: Update the unit list to add the new diagonal units
 d0_units = [[x + y for x, y in zip(rows, cols)]]
 d1_units = [[x + y for x, y in zip(rows, reversed(cols))]]
 unitlist += d0_units + d1_units
@@ -55,8 +54,16 @@ def naked_twins(values):
     Pseudocode for this algorithm on github:
     https://github.com/udacity/artificial-intelligence/blob/master/Projects/1_Sudoku/pseudocode.md
     """
-    # TODO: Implement this function!
-    raise NotImplementedError
+    for unit in unitlist:
+        pairs = [b for b in unit if len(values[b]) == 2]
+        for b0 in pairs:
+            for b1 in pairs:
+                if b1 != b0 and values[b0] == values[b1]:
+                    for b in unit:
+                        if b not in [b0, b1]:
+                            values[b] = values[b].replace(values[b0][0], '')
+                            values[b] = values[b].replace(values[b0][1], '')
+    return values
 
 
 def eliminate(values):
@@ -75,8 +82,7 @@ def eliminate(values):
     dict
         The values dictionary with the assigned values eliminated from peers
     """
-    # TODO: Copy your code from the classroom to complete this function
-    for box, state in values:
+    for box, state in values.items():
         if len(state) == 1:
             for peer in peers[box]:
                 values[peer] = values[peer].replace(state, '')
@@ -103,7 +109,6 @@ def only_choice(values):
     -----
     You should be able to complete this function by copying your code from the classroom
     """
-    # TODO: Copy your code from the classroom to complete this function
     for k,v in values.items():
         if len(v) > 1:
             for o in v:
@@ -128,7 +133,6 @@ def reduce_puzzle(values):
         The values dictionary after continued application of the constraint strategies
         no longer produces any changes, or False if the puzzle is unsolvable 
     """
-    # TODO: Copy your code from the classroom and modify it to complete this function
     stalled = False
     while not stalled:
         # Check how many boxes have a determined value
@@ -140,6 +144,8 @@ def reduce_puzzle(values):
         # Your code here: Use the Only Choice Strategy
         values = only_choice(values)
         
+        values = naked_twins(values)
+
         # Check how many boxes have a determined value, to compare
         solved_values_after = len([box for box in values.keys() if len(values[box]) == 1])
         # If no new values were added, stop the loop.
@@ -169,7 +175,7 @@ def search(values):
     You should be able to complete this function by copying your code from the classroom
     and extending it to call the naked twins strategy.
     """
-    # TODO: Copy your code from the classroom to complete this function
+
     "Using depth-first search and propagation, create a search tree and solve the sudoku."
     # First, reduce the puzzle using the previous function
     values = reduce_puzzle(values)
