@@ -1,4 +1,4 @@
-
+from pprint import pprint
 from itertools import chain, combinations
 from aimacode.planning import Action
 from aimacode.utils import expr
@@ -19,8 +19,16 @@ class ActionLayer(BaseActionLayer):
         --------
         layers.ActionNode
         """
-        # TODO: implement this function
-        raise NotImplementedError
+        
+        for effect in actionA.effects:
+            if ~effect in actionB.effects:
+                return True
+
+        for effect in actionB.effects:
+            if ~effect in actionA.effects:
+                return True
+        
+        return False
 
 
     def _interference(self, actionA, actionB):
@@ -34,8 +42,16 @@ class ActionLayer(BaseActionLayer):
         --------
         layers.ActionNode
         """
-        # TODO: implement this function
-        raise NotImplementedError
+
+        for effect in actionA.effects:
+            if ~effect in actionB.preconditions:
+                return True
+
+        for effect in actionB.effects:
+            if ~effect in actionA.preconditions:
+                return True
+        
+        return False
 
     def _competing_needs(self, actionA, actionB):
         """ Return True if any preconditions of the two actions are pairwise mutex in the parent layer
@@ -49,8 +65,9 @@ class ActionLayer(BaseActionLayer):
         layers.ActionNode
         layers.BaseLayer.parent_layer
         """
-        # TODO: implement this function
-        raise NotImplementedError
+        if any(self.parent_layer.is_mutex(A, B) for A in actionA.preconditions for B in actionB.preconditions):
+            return True
+        return False
 
 
 class LiteralLayer(BaseLiteralLayer):
@@ -66,13 +83,20 @@ class LiteralLayer(BaseLiteralLayer):
         --------
         layers.BaseLayer.parent_layer
         """
-        # TODO: implement this function
-        raise NotImplementedError
+
+        for actionA in self.parents[literalA]:
+            for actionB in self.parents[literalB]: 
+                if (not self.parent_layer.is_mutex(actionA, actionB)) and (not self.parent_layer.is_mutex(actionB, actionA)):
+                    return False
+        return True
 
     def _negation(self, literalA, literalB):
         """ Return True if two literals are negations of each other """
-        # TODO: implement this function
-        raise NotImplementedError
+
+        if literalA == ~literalB:
+            return True
+
+        return False
 
 
 class PlanningGraph:
@@ -135,8 +159,19 @@ class PlanningGraph:
         --------
         Russell-Norvig 10.3.1 (3rd Edition)
         """
-        # TODO: implement this function
-        raise NotImplementedError
+        levelsum = 0
+        goals = self.goal
+        layers = enumerate(self.literal_layers)
+        while goals:
+            self._extend()
+            level, layer = next(layers)
+            found = set()
+            for goal in goals:
+                if goal in layer:
+                    levelsum += level
+                    found.add(goal)
+            goals.difference_update(found)
+        return levelsum
 
     def h_maxlevel(self):
         """ Calculate the max level heuristic for the planning graph
@@ -165,8 +200,15 @@ class PlanningGraph:
         -----
         WARNING: you should expect long runtimes using this heuristic with A*
         """
-        # TODO: implement maxlevel heuristic
-        raise NotImplementedError
+        level = 0
+        goals = self.goal
+        layers = enumerate(self.literal_layers)
+        while goals:
+            self._extend()
+            level, layer = next(layers)
+            found = [g for g in goals if g in layer]
+            goals.difference_update(found)
+        return level
 
     def h_setlevel(self):
         """ Calculate the set level heuristic for the planning graph
@@ -190,8 +232,12 @@ class PlanningGraph:
         -----
         WARNING: you should expect long runtimes using this heuristic on complex problems
         """
-        # TODO: implement setlevel heuristic
-        raise NotImplementedError
+        goals = self.goal
+        for i, layer in enumerate(self.literal_layers):
+            self._extend()
+            if all(g in layer for g in self.goal):
+                if not any(layer.is_mutex(A, B) for A in self.goal for B in self.goal if A != B):
+                    return i
 
     ##############################################################################
     #                     DO NOT MODIFY CODE BELOW THIS LINE                     #
